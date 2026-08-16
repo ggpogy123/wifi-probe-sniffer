@@ -1,4 +1,4 @@
-# Journal (11 hrs)
+# Journal (14.5 hrs)
 
 ## July 28 - Day 1 (2 hrs)
 
@@ -98,4 +98,26 @@ I also figured out how the buttons actually work in the simulator. You have to w
 
 ### Problems Encountered
 My button was completely unresponsive at first and then when I was messing randomly with the code, it started automatically clearing the log in an infinite loop without me even pressing it. I used AI to debug the issue, which pointed out that the delay function was blocking the button reads and helped me write the `millis()` thing to fix it permanently.
+
+---
+## August 16- Day 5 (3.5 hrs)
+## What i did
+Today I added the suspicious person detection logic to the sniffer. The ESP32 now tracks every unique MAC address it sees and flags it as suspicious if it disappears and comes back multiple times over a long period of time. I also swapped out the fake probe simulation entirely and wrote the function that would work on a physical ESP32 picking up actual wifi packets.
+## What i learned
+My first idea for flagging suspicious devices was to count how many times a MAC appears in total, but that immediately falls apart as a phone sitting next to the device for an hour would just keep pinging and rack up a huge count even though it never left.
+
+Then I thought about using a time window, like flagging if a MAC appears more than 3 times within 60 seconds. But that has the opposite problem, a phone pings every 20-60 seconds naturally, so within 60 seconds you'd only ever see it once or twice. It would never trigger.
+
+The approach that actually makes sense is tracking first seen and last seen timestamps per MAC. A device is only flagged if it has been seen 3 or more times AND the gap between its first and last sighting is over 30 minutes. That way a phone sitting nearby all day doesn't get flagged, but a device that keeps disappearing and reappearing near you across a long period does.
+
+I also learned how the real promiscuous mode callback works. Instead of us calling a function myself, i registered a sniffer_callback with the hardware using esp_wifi_set_promiscuous_rx_cb() and the ESP32 calls it automatically every time the antenna picks up a frame. Inside the callback, probe requests have the frame type 0x40 in the first byte, the sender MAC is always at bytes 10-15, and the SSID length and text are at bytes 25 and so on. So I  just read from those fixed positions directly.
+
+## Screenshots
+
+<img width="1049" height="1044" alt="image" src="https://github.com/user-attachments/assets/4a754320-1285-4ddc-bd78-bc7583e4adba" />
+<img width="928" height="308" alt="image" src="https://github.com/user-attachments/assets/814d7cb6-7ffe-47c9-a440-6186c20e7ca5" />
+
+## Problems Encountered
+I was so busy in my exams that i couldnt work on this for around 2 weeks so i essentially forgot about what all i had done and had to check everything again lol. I have ordered an esp to check this code and it will arrive soon. This is why i ported the entire code to work on real hardware. One issue is that if the esp loses power, the whole cache is lost in which it stores the list of mac addessres for the suspicion detection part.
+
 
