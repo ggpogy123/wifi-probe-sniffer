@@ -122,9 +122,9 @@ I was so busy in my exams that i couldnt work on this for around 2 weeks so i es
 
 ---
 # August 23-24 (11.5 hours)
-August 18 - Day 6: The Overnight Hardware Grind (10 hrs)
+
 What I did
-My physical ESP32 finally arrived in the mail on friday thursday but i had a test on friday so i had stalled the project for a bit. As the deadline was preponed, I decided to sit down and pull an all-nighter to migrate the entire project from the Wokwi simulator onto the real deal and finish everything. This migration took quite a bit as my ide was acting up a lot and wasnt detecting my esp at first and i had to rely on ai to get everything to speed. I also did everything in phases as i was working all night and submitted only a single devlog.
+My physical ESP32 finally arrived in the mail on thursday but i had a test on friday so i had stalled the project for a bit. As the deadline was preponed, I decided to sit down and pull an all-nighter to migrate the entire project from the Wokwi simulator onto the real deal and finish everything. This migration took quite a bit as my ide was acting up a lot and wasnt detecting my esp at first and i had to rely on ai to get everything to speed. I also did everything in phases as i was working all night and submitted only a single devlog.
 
 ### Phase 1: Real Hardware & Channel Hopping (2 hrs)
 I connected the ESP32 and tested the code with real Wi-Fi. It immediately booted and initialized promiscuous mode, but it was barely catching any probe packets at all. After asking AI why my board was missing active phones nearby, it explained that the Wi-Fi radio stays locked to Channel 1 by default, meaning I was missing roughly 90% of the broadcast traffic happening across all the other 2.4GHz channels. I then implemented a hopChannel() function that cycles through channels 1 to 13 every 500 milliseconds.
