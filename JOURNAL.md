@@ -1,4 +1,4 @@
-# Journal (14.5 hrs)
+# Journal (26 hrs)
 
 ## July 28 - Day 1 (2 hrs)
 
@@ -120,4 +120,51 @@ I also learned how the real promiscuous mode callback works. Instead of us calli
 ## Problems Encountered
 I was so busy in my exams that i couldnt work on this for around 2 weeks so i essentially forgot about what all i had done and had to check everything again lol. I have ordered an esp to check this code and it will arrive soon. This is why i ported the entire code to work on real hardware. One issue is that if the esp loses power, the whole cache is lost in which it stores the list of mac addessres for the suspicion detection part.
 
+---
+# August 23-24 (11.5 hours)
+August 18 - Day 6: The Overnight Hardware Grind (10 hrs)
+What I did
+My physical ESP32 finally arrived in the mail on friday thursday but i had a test on friday so i had stalled the project for a bit. As the deadline was preponed, I decided to sit down and pull an all-nighter to migrate the entire project from the Wokwi simulator onto the real deal and finish everything. This migration took quite a bit as my ide was acting up a lot and wasnt detecting my esp at first and i had to rely on ai to get everything to speed. I also did everything in phases as i was working all night and submitted only a single devlog.
 
+### Phase 1: Real Hardware & Channel Hopping (2 hrs)
+I connected the ESP32 and tested the code with real Wi-Fi. It immediately booted and initialized promiscuous mode, but it was barely catching any probe packets at all. After asking AI why my board was missing active phones nearby, it explained that the Wi-Fi radio stays locked to Channel 1 by default, meaning I was missing roughly 90% of the broadcast traffic happening across all the other 2.4GHz channels. I then implemented a hopChannel() function that cycles through channels 1 to 13 every 500 milliseconds.
+
+### Phase 2: Debugging Crash Loops & FreeRTOS Architecture (3.5 hrs)
+Once channel hopping was active and the ESP32 started picking up dozens of real phones nearby, the board started crashing constantly in an infinite reboot loop, giving a guru something error on the serial monitor.
+I pasted the crash dumps into Claude to figure out what was breaking. It explained that the sniffer_callback() function runs directly inside the Wi-Fi interrupt. Because I was doing slow I2C display drawing (display.display()), serial prints, and dynamic String manipulation inside that callback, it was blocking the CPU for too long. The hardware watchdog thought the board had frozen and forcibly reset it.
+Claude and Gemini helped me restructure the whole firmware to use FreeRTOS. I created a queue `probeQueue` and wrote the callback to only extract raw bytes into a compact struct and push it using `xQueueSendFromISR`. Then I created a dedicated background worker task `probeWorkerTask` pinned to Core 0 using `xTaskCreatePinnedToCore`. This worker task sits in a loop, listens for new packets coming out of the queue, and handles all the heavy display drawing and serial prints without blocking the Wi-Fi hardware.
+
+### Phase 3: Persistent Flash Storage with LittleFS (2 hrs)
+One big problem I noted back on Day 5 was that whenever the ESP32 loses power or restarts, all the tracked devices and logs disappear from RAM. To solve this without needing an external SD card module, I used LittleFS to treat the ESP32's built-in flash memory like a storage drive. With the help of AI to understand the LittleFS syntax, I wrote a logging function that writes each captured probe into a`/probes.csv` file with timestamps, MAC, SSID, RSSI, vendor, and MAC type. I also added a failsafe check so that if LittleFS fails to mount for any reason, the device just continues running in live memory-only mode without crashing.
+
+### Phase 4: OUI Vendor Lookup & MAC Randomization Check (1 hrs)
+I wanted the sniffer to tell me what kind of device is scanning nearby instead of just showing raw hexadecimal MAC addresses. I asked Claude to generate a list of around 80 common device manufacturer OUI prefixes (Apple, Samsung, Google, Xiaomi, OnePlus, Espressif, Intel, Motorola, etc.) and format them into a clean struct array. Claude also suggested storing this table in flash memory using the `PROGMEM` keyword so it would not eat up RAM.
+I also found out that we can easily tell if a device is hiding its mac address by randomizing it. We can tell if it has been randomized by checking the first byte of the MAc address.
+
+### Phase 5: 4-Screen UI System & Hardware Button (~2.5 hrs)
+With all this new data (vendors, proximity, randomized status, uptime, storage state), everything became too crowded for a single OLED display. I wired a second push button to GPIO 18 `BUTTON_NEXT` so I could cycle through different screens. This has a 4 screen setup:
+ Screen 0: Live probe view.
+ Screen 1: Overall statistics, total probe count, unique device count, uptime, and LittleFS status.
+ Screen 2: Most suspicious device detected so far based on repeat sighting scores.
+  Screen 3: Detailed view of the last captured probe including MAC type and vendor.
+I also updated the reset button on GPIO 19 so that holding it clears the RAM and also wipes the `/probes.csv` file.
+
+## What I learned
+ - Why FreeRTOS tasks and queues are essential for real-time embedded system? Interrupt callbacks must be non-blocking and lightning fast, while slow tasks like I2C screen drawing and file I/O should be pushed to background threads.
+- Multicore process working on the ESP32 by assigning tasks to Core 0 while the Wi-Fi stack runs on Core 1.
+- How to use LittleFS to store structured CSV files directly on internal memory.
+- How MAC address standards work. And how to tell if a MAC address is randomised.
+- How the `PROGMEM` keyword works.
+
+## Screenshots
+<img width="2559" height="1471" alt="image" src="https://github.com/user-attachments/assets/a7eac239-f83b-4dbc-afe3-4e6d522756c3" />
+<img width="606" height="335" alt="image" src="https://github.com/user-attachments/assets/7a6be0bd-988a-4125-a5df-741d0325ed8a" />
+<img width="694" height="385" alt="image" src="https://github.com/user-attachments/assets/601d21f6-6cc4-4cde-88b0-cb4ac2af97ef" />
+<img width="2532" height="1573" alt="image" src="https://github.com/user-attachments/assets/7c76dcb1-1f02-4593-b9b5-76ee66c6b43a" />
+<img width="2559" height="1599" alt="image" src="https://github.com/user-attachments/assets/3e42d909-d70a-46f3-aca2-dd8ea04e3e2f" />
+
+## Problems Encountered
+- Memory Corruption in FreeRTOS: When I first set up the queue, I tried passing String objects inside the struct. The board kept crashing because the memory kept corrupting over the task contexts. Gemini taught me how to make a plain C struct `ProbePacket` with fixed-size byte arrays `uint8_t mac[6]` and `char ssid[33]` so memory stays safe and the board doesnt craash.
+ -  OLED Screen Overflow: Trying to show SSID, MAC, vendor, RSSI, threat level, and probe counts on one small screen caused text to overlap and clip off the edges. Splitting the UI across 4 switchable screens solved this perfectly.
+ -  Wi-Fi Dropped Packets: Before adding the FreeRTOS queue, testing in an area with 5 active smartphones caused the ESP32 to drop over half the probes due to I2C blocking. Making the callback separate from the display completely resolved the drops.
+ -  I do not have an oled at hand to test the display but i have verified that everything used to work on wokwi and gemini also says it should work perfectly.
