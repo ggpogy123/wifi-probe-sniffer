@@ -126,10 +126,10 @@ I was so busy in my exams that i couldnt work on this for around 2 weeks so i es
 What I did
 My physical ESP32 finally arrived in the mail on thursday but i had a test on friday so i had stalled the project for a bit. As the deadline was preponed, I decided to sit down and pull an all-nighter to migrate the entire project from the Wokwi simulator onto the real deal and finish everything. This migration took quite a bit as my ide was acting up a lot and wasnt detecting my esp at first and i had to rely on ai to get everything to speed. I also did everything in phases as i was working all night and submitted only a single devlog.
 
-### Phase 1: Real Hardware & Channel Hopping (2 hrs)
+### Phase 1: Real Hardware testing and Channel Hopping implementation (2 hrs)
 I connected the ESP32 and tested the code with real Wi-Fi. It immediately booted and initialized promiscuous mode, but it was barely catching any probe packets at all. After asking AI why my board was missing active phones nearby, it explained that the Wi-Fi radio stays locked to Channel 1 by default, meaning I was missing roughly 90% of the broadcast traffic happening across all the other 2.4GHz channels. I then implemented a hopChannel() function that cycles through channels 1 to 13 every 500 milliseconds.
 
-### Phase 2: Debugging Crash Loops & FreeRTOS Architecture (3.5 hrs)
+### Phase 2: Debugging Crashes, switch to FreeRTOS Architecture (3.5 hrs)
 Once channel hopping was active and the ESP32 started picking up dozens of real phones nearby, the board started crashing constantly in an infinite reboot loop, giving a guru something error on the serial monitor.
 I pasted the crash dumps into Claude to figure out what was breaking. It explained that the sniffer_callback() function runs directly inside the Wi-Fi interrupt. Because I was doing slow I2C display drawing (display.display()), serial prints, and dynamic String manipulation inside that callback, it was blocking the CPU for too long. The hardware watchdog thought the board had frozen and forcibly reset it.
 Claude and Gemini helped me restructure the whole firmware to use FreeRTOS. I created a queue `probeQueue` and wrote the callback to only extract raw bytes into a compact struct and push it using `xQueueSendFromISR`. Then I created a dedicated background worker task `probeWorkerTask` pinned to Core 0 using `xTaskCreatePinnedToCore`. This worker task sits in a loop, listens for new packets coming out of the queue, and handles all the heavy display drawing and serial prints without blocking the Wi-Fi hardware.
@@ -137,11 +137,11 @@ Claude and Gemini helped me restructure the whole firmware to use FreeRTOS. I cr
 ### Phase 3: Persistent Flash Storage with LittleFS (2 hrs)
 One big problem I noted back on Day 5 was that whenever the ESP32 loses power or restarts, all the tracked devices and logs disappear from RAM. To solve this without needing an external SD card module, I used LittleFS to treat the ESP32's built-in flash memory like a storage drive. With the help of AI to understand the LittleFS syntax, I wrote a logging function that writes each captured probe into a`/probes.csv` file with timestamps, MAC, SSID, RSSI, vendor, and MAC type. I also added a failsafe check so that if LittleFS fails to mount for any reason, the device just continues running in live memory-only mode without crashing.
 
-### Phase 4: OUI Vendor Lookup & MAC Randomization Check (1 hrs)
+### Phase 4: OUI Vendor Lookup and MAC Randomization Check (1 hrs)
 I wanted the sniffer to tell me what kind of device is scanning nearby instead of just showing raw hexadecimal MAC addresses. I asked Claude to generate a list of around 80 common device manufacturer OUI prefixes (Apple, Samsung, Google, Xiaomi, OnePlus, Espressif, Intel, Motorola, etc.) and format them into a clean struct array. Claude also suggested storing this table in flash memory using the `PROGMEM` keyword so it would not eat up RAM.
 I also found out that we can easily tell if a device is hiding its mac address by randomizing it. We can tell if it has been randomized by checking the first byte of the MAc address.
 
-### Phase 5: 4-Screen UI System & Hardware Button (~2.5 hrs)
+### Phase 5: 4-Screen UI System implementation using external button (~2.5 hrs)
 With all this new data (vendors, proximity, randomized status, uptime, storage state), everything became too crowded for a single OLED display. I wired a second push button to GPIO 18 `BUTTON_NEXT` so I could cycle through different screens. This has a 4 screen setup:
  Screen 0: Live probe view.
  Screen 1: Overall statistics, total probe count, unique device count, uptime, and LittleFS status.
