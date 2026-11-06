@@ -8,4 +8,4 @@ A passive radio scanner made with ESP32 that intercepts WiFi probe requests from
 ## Journal
 See [JOURNAL.md](./JOURNAL.md) for the build log.
 
-Orignally made for ispy ysws.
+Orignally made for ~~ispy~~ twisted ysws.
