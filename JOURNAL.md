@@ -58,7 +58,7 @@ Wokwi can't simulate this Wi-Fi thing (no actual  devices broadcasting packets i
 
 ---
 
-## August 1 and 2 - Day 2-3 (6 hrs)
+## August 1 and 2 - Day 3-4 (6 hrs)
 ### What i did
 Couldnt update the journal yesterday as some work came up when i started to write so i am combining both days into one.
 So basically what i did was attach an oled display to the esp so it displays the wifi ssid,mac addresses and the RSSI's on the go and i do not have to connect a pc to the esp to see the output.
@@ -82,7 +82,7 @@ Most of the code writing has been done by me, I used Claude to understand the do
 
 ---
 
-## August 5- Day 4 (1.5 hrs)
+## August 5- Day 5 (1.5 hrs)
 ### What i did
 Today I implemented a button to clear the screen and reset the probe logs. I wired one side of the button to pin `19` and the other directly to `GND`. I also restructured the main loop of the code with the help of AI to handle the button input properly.
 ### What I learned
@@ -100,7 +100,7 @@ I also figured out how the buttons actually work in the simulator. You have to w
 My button was completely unresponsive at first and then when I was messing randomly with the code, it started automatically clearing the log in an infinite loop without me even pressing it. I used AI to debug the issue, which pointed out that the delay function was blocking the button reads and helped me write the `millis()` thing to fix it permanently.
 
 ---
-## August 16- Day 5 (3.5 hrs)
+## August 16- Day 6 (3.5 hrs)
 ## What i did
 Today I added the suspicious person detection logic to the sniffer. The ESP32 now tracks every unique MAC address it sees and flags it as suspicious if it disappears and comes back multiple times over a long period of time. I also swapped out the fake probe simulation entirely and wrote the function that would work on a physical ESP32 picking up actual wifi packets.
 ## What i learned
