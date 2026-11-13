@@ -2,8 +2,15 @@
 
 A passive radio scanner made with ESP32 that intercepts WiFi probe requests from nearby devices, logging the networks they've previously visited along with their hardware ID and signal strength-without ever joining a network or being detected. Therefore, making a profile of locations the person has visited before, using the wifi ssid names.
 
+<img width="606" height="335" alt="image" src="https://github.com/user-attachments/assets/1fdd2f55-3674-43e5-94b1-a9cdc443da7c" />
+<img width="694" height="385" alt="image" src="https://github.com/user-attachments/assets/aa656c6f-0aa1-47ef-9a41-fe818e9bf6ec" />
+<img width="1122" height="875" alt="image" src="https://github.com/user-attachments/assets/33f1faf2-ec39-4481-b3b4-edae9bf5169e" />
+
+
 ## Wokwi Simulation
 [Click here to open the wokwi simulation](https://wokwi.com/projects/470809395237056513)
+
+
 
 ## Journal
 See [JOURNAL.md](./JOURNAL.md) for the build log.
